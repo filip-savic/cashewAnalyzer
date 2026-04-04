@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cashew Analyzer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <h1>Cashew Analyzer</h1>
+      <div class="header-controls">
+        <select id="year-select" aria-label="Select year"></select>
+        <div id="view-tabs" class="view-tabs">
+          <button class="view-tab active" data-view="year">Year</button>
+          <button class="view-tab" data-view="month">Month</button>
+          <button class="view-tab" data-view="group">Groups</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <div id="chart-area">
+        <div id="chart-container"></div>
+        <div id="summary-bar-container" class="hidden"></div>
+        <div id="group-sub-toggle" class="hidden">
+          <button class="sub-tab active" data-sub="treemap">Treemap</button>
+          <button class="sub-tab" data-sub="trend">Time Trend</button>
+        </div>
+      </div>
+
+      <aside id="sidebar">
+        <div class="sidebar-section">
+          <label class="upload-btn" for="csv-upload">
+            Upload CSV
+            <input type="file" id="csv-upload" accept=".csv" hidden>
+          </label>
+          <span id="file-info" class="file-info"></span>
+        </div>
+
+        <details class="sidebar-section accordion" id="group-accordion">
+          <summary class="accordion-header">Group Editor</summary>
+          <div id="group-editor" class="group-editor">
+            <div class="move-target-bar hidden" id="move-targets"></div>
+            <div class="group-lane" data-group="mustHave">
+              <div class="lane-header">
+                <span class="lane-title must-have">Must Have</span>
+                <span class="lane-total" id="total-mustHave"></span>
+              </div>
+              <div class="lane-pills" id="pills-mustHave"></div>
+            </div>
+            <div class="group-lane" data-group="canSave">
+              <div class="lane-header">
+                <span class="lane-title can-save">Can Save</span>
+                <span class="lane-total" id="total-canSave"></span>
+              </div>
+              <div class="lane-pills" id="pills-canSave"></div>
+            </div>
+            <div class="group-lane" data-group="rest">
+              <div class="lane-header">
+                <span class="lane-title rest">Rest</span>
+                <span class="lane-total" id="total-rest"></span>
+              </div>
+              <div class="lane-pills" id="pills-rest"></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="sidebar-section accordion" id="filter-accordion">
+          <summary class="accordion-header">Category Filters</summary>
+          <div id="filter-mode-toggle" class="filter-mode-toggle">
+            <button class="filter-mode-btn active" data-mode="expenses">Expenses</button>
+            <button class="filter-mode-btn" data-mode="income">Income</button>
+          </div>
+          <div class="filter-controls">
+            <button id="select-all" class="filter-btn">All</button>
+            <button id="select-none" class="filter-btn">None</button>
+            <label class="toggle-label" id="invest-toggle-label">
+              <input type="checkbox" id="show-invest"> Show Excluded
+            </label>
+          </div>
+          <div id="category-filters" class="category-filters"></div>
+        </details>
+      </aside>
+    </main>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading data...</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
