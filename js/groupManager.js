@@ -46,7 +46,7 @@ export function initGroupManager() {
 
 function computeTotals() {
   categoryTotals = {};
-  const txns = State.get('transactions').filter(t => !t.isIncome && !State.EXCLUDED_CATEGORIES.includes(t.category));
+  const txns = State.get('transactions').filter(t => !t.isIncome && !State.getExcludedCategories().has(t.category));
   const viewMode = State.get('viewMode');
   const selectedYear = viewMode !== 'year' ? State.get('selectedYear') : null;
 
