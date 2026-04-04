@@ -72,7 +72,7 @@ async function loadData(csvContent, filename) {
   initCharts();
 
   // Listen for state changes and re-render
-  const renderKeys = ['viewMode', 'groupSubView', 'selectedYear', 'selectedMonth', 'categoryFilters', 'incomeCategoryFilters', 'groupAssignments', 'showExcluded', 'subcategoryExclusions'];
+  const renderKeys = ['viewMode', 'groupSubView', 'selectedYear', 'selectedMonth', 'categoryFilters', 'incomeCategoryFilters', 'groupAssignments', 'showExcluded', 'subcategoryExclusions', 'lineVisibility'];
   for (const key of renderKeys) {
     State.on(key, () => {
       renderChart();

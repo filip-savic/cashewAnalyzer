@@ -176,76 +176,84 @@ function renderYearView() {
     data: years.map(y => Math.round(byYear[y]?.[cat] || 0)),
   }));
 
+  const lineVis = State.get('lineVisibility');
+
   // Add income line (pure income, always green, with labels)
-  series.push({
-    ...INCOME_LINE_STYLE,
-    data: years.map(y => Math.round(incomeByYear[y] || 0)),
-    label: {
-      show: true,
-      position: 'top',
-      backgroundColor: 'rgba(20, 20, 40, 0.85)',
-      padding: [2, 4],
-      borderRadius: 2,
-      formatter: (params) => {
-        if (!params.value) return '';
-        return formatEUR(params.value);
+  if (lineVis.income) {
+    series.push({
+      ...INCOME_LINE_STYLE,
+      data: years.map(y => Math.round(incomeByYear[y] || 0)),
+      label: {
+        show: true,
+        position: 'top',
+        backgroundColor: 'rgba(20, 20, 40, 0.85)',
+        padding: [2, 4],
+        borderRadius: 2,
+        formatter: (params) => {
+          if (!params.value) return '';
+          return formatEUR(params.value);
+        },
+        color: INCOME_COLOR,
+        fontSize: 10,
+        fontWeight: 'bold',
       },
-      color: INCOME_COLOR,
-      fontSize: 10,
-      fontWeight: 'bold',
-    },
-  });
+    });
+  }
 
   // Add inflation-adjusted income line (real purchasing power)
   const cpiIndex = getCPIIndex(years);
-  series.push({
-    ...INFLATION_ADJ_LINE_STYLE,
-    data: years.map(y => Math.round((incomeByYear[y] || 0) / (cpiIndex[y] || 1))),
-    label: {
-      show: true,
-      position: 'bottom',
-      backgroundColor: 'rgba(20, 20, 40, 0.85)',
-      padding: [2, 4],
-      borderRadius: 2,
-      formatter: (params) => {
-        if (!params.value) return '';
-        return formatEUR(params.value);
+  if (lineVis.incomeReal) {
+    series.push({
+      ...INFLATION_ADJ_LINE_STYLE,
+      data: years.map(y => Math.round((incomeByYear[y] || 0) / (cpiIndex[y] || 1))),
+      label: {
+        show: true,
+        position: 'bottom',
+        backgroundColor: 'rgba(20, 20, 40, 0.85)',
+        padding: [2, 4],
+        borderRadius: 2,
+        formatter: (params) => {
+          if (!params.value) return '';
+          return formatEUR(params.value);
+        },
+        color: INFLATION_ADJ_COLOR,
+        fontSize: 10,
+        fontWeight: 'bold',
       },
-      color: INFLATION_ADJ_COLOR,
-      fontSize: 10,
-      fontWeight: 'bold',
-    },
-  });
+    });
+  }
 
   // Add net line (income − expenses, colored by sign)
-  series.push({
-    ...NET_LINE_STYLE,
-    data: years.map(y => {
-      const income = Math.round(incomeByYear[y] || 0);
-      const expense = Math.round(expenseTotalByYear[y] || 0);
-      const net = income - expense;
-      const color = net >= 0 ? INCOME_COLOR : NET_COLOR_NEG;
-      return { value: net, itemStyle: { color }, lineStyle: { color, width: 2, type: 'dashed' } };
-    }),
-    label: {
-      show: true,
-      position: 'top',
-      backgroundColor: 'rgba(10, 10, 30, 0.95)',
-      padding: [4, 8],
-      borderRadius: 4,
-      borderColor: 'rgba(100, 140, 255, 0.4)',
-      borderWidth: 1,
-      formatter: (params) => {
-        if (!params.value) return '';
-        const tag = (params.value ?? 0) >= 0 ? 'pos' : 'neg';
-        return `{${tag}|${formatEUR(params.value)}}`;
+  if (lineVis.net) {
+    series.push({
+      ...NET_LINE_STYLE,
+      data: years.map(y => {
+        const income = Math.round(incomeByYear[y] || 0);
+        const expense = Math.round(expenseTotalByYear[y] || 0);
+        const net = income - expense;
+        const color = net >= 0 ? INCOME_COLOR : NET_COLOR_NEG;
+        return { value: net, itemStyle: { color }, lineStyle: { color, width: 2, type: 'dashed' } };
+      }),
+      label: {
+        show: true,
+        position: 'top',
+        backgroundColor: 'rgba(10, 10, 30, 0.95)',
+        padding: [4, 8],
+        borderRadius: 4,
+        borderColor: 'rgba(100, 140, 255, 0.4)',
+        borderWidth: 1,
+        formatter: (params) => {
+          if (!params.value) return '';
+          const tag = (params.value ?? 0) >= 0 ? 'pos' : 'neg';
+          return `{${tag}|${formatEUR(params.value)}}`;
+        },
+        rich: {
+          pos: { color: INCOME_COLOR, fontSize: 12, fontWeight: 'bold' },
+          neg: { color: NET_COLOR_NEG, fontSize: 12, fontWeight: 'bold' },
+        },
       },
-      rich: {
-        pos: { color: INCOME_COLOR, fontSize: 12, fontWeight: 'bold' },
-        neg: { color: NET_COLOR_NEG, fontSize: 12, fontWeight: 'bold' },
-      },
-    },
-  });
+    });
+  }
 
   const option = {
     backgroundColor: 'transparent',
@@ -255,9 +263,9 @@ function renderYearView() {
       formatter: (params) => {
         const year = params[0].axisValue;
         let expenseTotal = 0;
-        const incomeLine = params.find(p => p.seriesName === 'Income');
-        const realLine = params.find(p => p.seriesName === 'Income (real)');
-        const netLine = params.find(p => p.seriesName === 'Net');
+        const incomeLine = lineVis.income ? params.find(p => p.seriesName === 'Income') : null;
+        const realLine = lineVis.incomeReal ? params.find(p => p.seriesName === 'Income (real)') : null;
+        const netLine = lineVis.net ? params.find(p => p.seriesName === 'Net') : null;
         const incomeVal = incomeLine ? incomeLine.value : 0;
         const realVal = realLine ? realLine.value : 0;
         const netVal = netLine ? netLine.value : null;
@@ -372,78 +380,86 @@ function renderMonthBars(txns) {
     data: MONTH_NAMES.map((_, i) => Math.round(byMonth[i + 1]?.[cat] || 0)),
   }));
 
+  const lineVis = State.get('lineVisibility');
+
   // Add income line (pure income, always green, with labels)
-  series.push({
-    ...INCOME_LINE_STYLE,
-    data: MONTH_NAMES.map((_, i) => Math.round(incomeByMonth[i + 1] || 0)),
-    label: {
-      show: true,
-      position: 'top',
-      backgroundColor: 'rgba(20, 20, 40, 0.85)',
-      padding: [2, 4],
-      borderRadius: 2,
-      formatter: (params) => {
-        if (!params.value) return '';
-        return formatEUR(params.value);
+  if (lineVis.income) {
+    series.push({
+      ...INCOME_LINE_STYLE,
+      data: MONTH_NAMES.map((_, i) => Math.round(incomeByMonth[i + 1] || 0)),
+      label: {
+        show: true,
+        position: 'top',
+        backgroundColor: 'rgba(20, 20, 40, 0.85)',
+        padding: [2, 4],
+        borderRadius: 2,
+        formatter: (params) => {
+          if (!params.value) return '';
+          return formatEUR(params.value);
+        },
+        color: INCOME_COLOR,
+        fontSize: 10,
+        fontWeight: 'bold',
       },
-      color: INCOME_COLOR,
-      fontSize: 10,
-      fontWeight: 'bold',
-    },
-  });
+    });
+  }
 
   // Add inflation-adjusted income line (real purchasing power for this year)
   const allYears = [...new Set(State.get('transactions').map(t => t.year))].sort((a, b) => a - b);
   const cpiIndexMonth = getCPIIndex(allYears);
   const yearCPI = cpiIndexMonth[selectedYear] || 1;
-  series.push({
-    ...INFLATION_ADJ_LINE_STYLE,
-    data: MONTH_NAMES.map((_, i) => Math.round((incomeByMonth[i + 1] || 0) / yearCPI)),
-    label: {
-      show: true,
-      position: 'bottom',
-      backgroundColor: 'rgba(20, 20, 40, 0.85)',
-      padding: [2, 4],
-      borderRadius: 2,
-      formatter: (params) => {
-        if (!params.value) return '';
-        return formatEUR(params.value);
+  if (lineVis.incomeReal) {
+    series.push({
+      ...INFLATION_ADJ_LINE_STYLE,
+      data: MONTH_NAMES.map((_, i) => Math.round((incomeByMonth[i + 1] || 0) / yearCPI)),
+      label: {
+        show: true,
+        position: 'bottom',
+        backgroundColor: 'rgba(20, 20, 40, 0.85)',
+        padding: [2, 4],
+        borderRadius: 2,
+        formatter: (params) => {
+          if (!params.value) return '';
+          return formatEUR(params.value);
+        },
+        color: INFLATION_ADJ_COLOR,
+        fontSize: 10,
+        fontWeight: 'bold',
       },
-      color: INFLATION_ADJ_COLOR,
-      fontSize: 10,
-      fontWeight: 'bold',
-    },
-  });
+    });
+  }
 
   // Add net line (income − expenses, colored by sign)
-  series.push({
-    ...NET_LINE_STYLE,
-    data: MONTH_NAMES.map((_, i) => {
-      const income = Math.round(incomeByMonth[i + 1] || 0);
-      const expense = Math.round(expenseTotalByMonth[i + 1] || 0);
-      const net = income - expense;
-      const color = net >= 0 ? INCOME_COLOR : NET_COLOR_NEG;
-      return { value: net, itemStyle: { color }, lineStyle: { color, width: 2, type: 'dashed' } };
-    }),
-    label: {
-      show: true,
-      position: 'top',
-      backgroundColor: 'rgba(10, 10, 30, 0.95)',
-      padding: [4, 8],
-      borderRadius: 4,
-      borderColor: 'rgba(100, 140, 255, 0.4)',
-      borderWidth: 1,
-      formatter: (params) => {
-        if (!params.value) return '';
-        const tag = (params.value ?? 0) >= 0 ? 'pos' : 'neg';
-        return `{${tag}|${formatEUR(params.value)}}`;
+  if (lineVis.net) {
+    series.push({
+      ...NET_LINE_STYLE,
+      data: MONTH_NAMES.map((_, i) => {
+        const income = Math.round(incomeByMonth[i + 1] || 0);
+        const expense = Math.round(expenseTotalByMonth[i + 1] || 0);
+        const net = income - expense;
+        const color = net >= 0 ? INCOME_COLOR : NET_COLOR_NEG;
+        return { value: net, itemStyle: { color }, lineStyle: { color, width: 2, type: 'dashed' } };
+      }),
+      label: {
+        show: true,
+        position: 'top',
+        backgroundColor: 'rgba(10, 10, 30, 0.95)',
+        padding: [4, 8],
+        borderRadius: 4,
+        borderColor: 'rgba(100, 140, 255, 0.4)',
+        borderWidth: 1,
+        formatter: (params) => {
+          if (!params.value) return '';
+          const tag = (params.value ?? 0) >= 0 ? 'pos' : 'neg';
+          return `{${tag}|${formatEUR(params.value)}}`;
+        },
+        rich: {
+          pos: { color: INCOME_COLOR, fontSize: 12, fontWeight: 'bold' },
+          neg: { color: NET_COLOR_NEG, fontSize: 12, fontWeight: 'bold' },
+        },
       },
-      rich: {
-        pos: { color: INCOME_COLOR, fontSize: 12, fontWeight: 'bold' },
-        neg: { color: NET_COLOR_NEG, fontSize: 12, fontWeight: 'bold' },
-      },
-    },
-  });
+    });
+  }
 
   const option = {
     backgroundColor: 'transparent',
@@ -454,9 +470,9 @@ function renderMonthBars(txns) {
         const month = params[0].axisValue;
         const monthIdx = MONTH_NAMES.indexOf(month) + 1;
         let expenseTotal = 0;
-        const incomeLine = params.find(p => p.seriesName === 'Income');
-        const realLine = params.find(p => p.seriesName === 'Income (real)');
-        const netLine = params.find(p => p.seriesName === 'Net');
+        const incomeLine = lineVis.income ? params.find(p => p.seriesName === 'Income') : null;
+        const realLine = lineVis.incomeReal ? params.find(p => p.seriesName === 'Income (real)') : null;
+        const netLine = lineVis.net ? params.find(p => p.seriesName === 'Net') : null;
         const incomeVal = incomeLine ? incomeLine.value : 0;
         const realVal = realLine ? realLine.value : 0;
         const netVal = netLine ? netLine.value : null;
@@ -687,37 +703,45 @@ function renderMonthTimeSeries() {
     expenseTotalByMonthAll[m] = Object.values(byMonth[m] || {}).reduce((sum, v) => sum + v, 0);
   }
 
+  const lineVis = State.get('lineVisibility');
+
   // Add income line (pure income, always green)
-  series.push({
-    ...INCOME_LINE_STYLE,
-    label: { show: false },
-    data: months.map(m => Math.round(incomeByMonth[m] || 0)),
-  });
+  if (lineVis.income) {
+    series.push({
+      ...INCOME_LINE_STYLE,
+      label: { show: false },
+      data: months.map(m => Math.round(incomeByMonth[m] || 0)),
+    });
+  }
 
   // Add inflation-adjusted income line (real purchasing power)
   const tsYears = [...new Set(months.map(m => parseInt(m.split('-')[0])))].sort((a, b) => a - b);
   const cpiIndexTS = getCPIIndex(tsYears);
-  series.push({
-    ...INFLATION_ADJ_LINE_STYLE,
-    label: { show: false },
-    data: months.map(m => {
-      const y = parseInt(m.split('-')[0]);
-      return Math.round((incomeByMonth[m] || 0) / (cpiIndexTS[y] || 1));
-    }),
-  });
+  if (lineVis.incomeReal) {
+    series.push({
+      ...INFLATION_ADJ_LINE_STYLE,
+      label: { show: false },
+      data: months.map(m => {
+        const y = parseInt(m.split('-')[0]);
+        return Math.round((incomeByMonth[m] || 0) / (cpiIndexTS[y] || 1));
+      }),
+    });
+  }
 
   // Add net line (income − expenses, colored by sign)
-  series.push({
-    ...NET_LINE_STYLE,
-    label: { show: false },
-    data: months.map(m => {
-      const income = Math.round(incomeByMonth[m] || 0);
-      const expense = Math.round(expenseTotalByMonthAll[m] || 0);
-      const net = income - expense;
-      const color = net >= 0 ? INCOME_COLOR : NET_COLOR_NEG;
-      return { value: net, itemStyle: { color }, lineStyle: { color, width: 2, type: 'dashed' } };
-    }),
-  });
+  if (lineVis.net) {
+    series.push({
+      ...NET_LINE_STYLE,
+      label: { show: false },
+      data: months.map(m => {
+        const income = Math.round(incomeByMonth[m] || 0);
+        const expense = Math.round(expenseTotalByMonthAll[m] || 0);
+        const net = income - expense;
+        const color = net >= 0 ? INCOME_COLOR : NET_COLOR_NEG;
+        return { value: net, itemStyle: { color }, lineStyle: { color, width: 2, type: 'dashed' } };
+      }),
+    });
+  }
 
   const option = {
     backgroundColor: 'transparent',
@@ -728,9 +752,9 @@ function renderMonthTimeSeries() {
       formatter: (params) => {
         const month = params[0].axisValue;
         let expenseTotal = 0;
-        const incomeLine = params.find(p => p.seriesName === 'Income');
-        const realLine = params.find(p => p.seriesName === 'Income (real)');
-        const netLine = params.find(p => p.seriesName === 'Net');
+        const incomeLine = lineVis.income ? params.find(p => p.seriesName === 'Income') : null;
+        const realLine = lineVis.incomeReal ? params.find(p => p.seriesName === 'Income (real)') : null;
+        const netLine = lineVis.net ? params.find(p => p.seriesName === 'Net') : null;
         const incomeVal = incomeLine ? incomeLine.value : 0;
         const realVal = realLine ? realLine.value : 0;
         const netVal = netLine ? netLine.value : null;

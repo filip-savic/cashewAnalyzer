@@ -3,6 +3,7 @@ const STORAGE_KEY_FILTERS = 'cashew_category_filters';
 const STORAGE_KEY_VIEW = 'cashew_view_prefs';
 const STORAGE_KEY_SUBCAT = 'cashew_subcategory_exclusions';
 const STORAGE_KEY_EXCLUDED = 'cashew_excluded_categories';
+const STORAGE_KEY_LINES = 'cashew_line_visibility';
 
 let excludedCategories = new Set();
 
@@ -25,6 +26,7 @@ const state = {
   filterMode: 'expenses',     // 'expenses' | 'income'
   subcategoryExclusions: new Set(),
   loadedFile: '',
+  lineVisibility: { income: true, incomeReal: true, net: true },
 };
 
 function loadPersistedState() {
@@ -59,6 +61,13 @@ function loadPersistedState() {
       excludedCategories = new Set(JSON.parse(saved));
     }
   } catch { /* use defaults */ }
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_LINES);
+    if (saved) {
+      state.lineVisibility = { ...state.lineVisibility, ...JSON.parse(saved) };
+    }
+  } catch { /* use defaults */ }
 }
 
 function persistGroups() {
@@ -90,6 +99,12 @@ function persistExcludedCategories() {
   } catch { /* storage full */ }
 }
 
+function persistLineVisibility() {
+  try {
+    localStorage.setItem(STORAGE_KEY_LINES, JSON.stringify(state.lineVisibility));
+  } catch { /* storage full */ }
+}
+
 function notify(key, value) {
   (listeners[key] || []).forEach(cb => cb(value, key));
   wildcardListeners.forEach(cb => cb(key, value));
@@ -107,6 +122,7 @@ export const State = {
     if (key === 'groupAssignments') persistGroups();
     if (['viewMode', 'selectedYear', 'showExcluded', 'filterMode'].includes(key)) persistViewPrefs();
     if (key === 'subcategoryExclusions') persistSubcatExclusions();
+    if (key === 'lineVisibility') persistLineVisibility();
 
     notify(key, value);
   },

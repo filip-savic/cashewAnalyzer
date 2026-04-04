@@ -3,6 +3,7 @@ import { formatEUR } from './dataLoader.js';
 
 let selectedCategory = null;
 let categoryTotals = {};
+let filteredOutCategories = new Set();
 
 export function initGroupManager() {
   computeTotals();
@@ -13,6 +14,10 @@ export function initGroupManager() {
     computeTotals();
     render();
   });
+  State.on('categoryFilters', () => { computeTotals(); render(); });
+  State.on('subcategoryExclusions', () => { computeTotals(); render(); });
+  State.on('selectedYear', () => { computeTotals(); render(); });
+  State.on('viewMode', () => { computeTotals(); render(); });
 
   // Click outside to deselect
   document.addEventListener('click', (e) => {
@@ -46,9 +51,39 @@ export function initGroupManager() {
 
 function computeTotals() {
   categoryTotals = {};
-  const txns = State.get('transactions').filter(t => !t.isIncome && !State.getExcludedCategories().has(t.category));
+  filteredOutCategories = new Set();
+
+  const filters = State.get('categoryFilters');
+  const subExcl = State.get('subcategoryExclusions');
+  const excluded = State.getExcludedCategories();
+  let txns = State.get('transactions').filter(t => !t.isIncome && !excluded.has(t.category));
   const viewMode = State.get('viewMode');
   const selectedYear = viewMode !== 'year' ? State.get('selectedYear') : null;
+
+  // Determine which categories are filtered out
+  if (filters !== null) {
+    const ga = State.get('groupAssignments');
+    if (ga) {
+      for (const group of ['mustHave', 'canSave', 'rest']) {
+        for (const cat of ga[group]) {
+          if (!filters.has(cat)) filteredOutCategories.add(cat);
+        }
+      }
+    }
+  }
+
+  // Apply category filters
+  if (filters !== null) {
+    txns = txns.filter(t => filters.has(t.category));
+  }
+
+  // Apply subcategory exclusions
+  if (subExcl.size > 0) {
+    txns = txns.filter(t => {
+      if (!t.subcategory) return true;
+      return !subExcl.has(`${t.category}::${t.subcategory}`);
+    });
+  }
 
   for (const t of txns) {
     if (selectedYear !== null && t.year !== selectedYear) continue;
@@ -69,11 +104,14 @@ function render() {
     let groupTotal = 0;
 
     for (const catName of ga[groupKey]) {
+      const isFiltered = filteredOutCategories.has(catName);
       const amount = categoryTotals[catName] || 0;
-      groupTotal += amount;
+      if (!isFiltered) groupTotal += amount;
 
       const pill = document.createElement('div');
-      pill.className = 'cat-pill' + (selectedCategory === catName ? ' selected' : '');
+      pill.className = 'cat-pill'
+        + (selectedCategory === catName ? ' selected' : '')
+        + (isFiltered ? ' filtered-out' : '');
       pill.draggable = true;
 
       // Find category color

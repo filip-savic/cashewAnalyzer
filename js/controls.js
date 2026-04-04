@@ -5,6 +5,7 @@ export function initControls() {
   initYearSelect();
   initViewTabs();
   initGroupSubTabs();
+  initLineToggles();
   initFilterModeToggle();
   initCategoryFilters();
   initExcludedToggle();
@@ -84,6 +85,41 @@ function initGroupSubTabs() {
   State.on('groupSubView', (sub) => {
     tabs.forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
   });
+}
+
+function initLineToggles() {
+  const container = document.getElementById('line-toggles');
+  const buttons = container.querySelectorAll('.line-toggle');
+  const vis = State.get('lineVisibility');
+
+  // Sync initial state from persisted visibility
+  buttons.forEach(btn => {
+    const key = btn.dataset.line;
+    btn.classList.toggle('active', vis[key]);
+    btn.addEventListener('click', () => {
+      const current = State.get('lineVisibility');
+      const updated = { ...current, [key]: !current[key] };
+      State.set('lineVisibility', updated);
+    });
+  });
+
+  State.on('lineVisibility', (vis) => {
+    buttons.forEach(btn => {
+      btn.classList.toggle('active', vis[btn.dataset.line]);
+    });
+  });
+
+  function updateToggleVisibility() {
+    const mode = State.get('viewMode');
+    const month = State.get('selectedMonth');
+    // Show toggles only on year/month views (not group, not pie drilldown)
+    const show = mode !== 'group' && !(mode === 'month' && month !== null);
+    container.classList.toggle('hidden', !show);
+  }
+
+  State.on('viewMode', updateToggleVisibility);
+  State.on('selectedMonth', updateToggleVisibility);
+  updateToggleVisibility();
 }
 
 const expandedCategories = new Set();
