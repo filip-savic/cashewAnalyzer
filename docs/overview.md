@@ -20,9 +20,8 @@ Loads a Cashew CSV export and provides interactive visualizations to understand 
 ### Key Features
 
 - **Group editor** — Tap a category pill to move it between Must Have / Can Save / Rest. Drag-and-drop also works on desktop. Group assignments persist in localStorage. Amounts respect active category/subcategory filters — filtered-out categories appear dimmed with a dashed border and their amounts are excluded from group totals.
-- **Category filters** — Toggle individual categories on/off. An Expenses/Income switch separates expense and income categories into their own views. Categories with subcategories expand to show subcategory-level checkboxes. Amounts update to reflect the current view period (all years in year view, single year in month/group views).
+- **Category filters** — Toggle individual categories on/off. An Expenses/Income switch separates expense and income categories into their own views. Categories with subcategories expand to show subcategory-level checkboxes. Amounts update to reflect the current view period (all years in year view, single year in month/group views). Filter selections persist in localStorage across reloads.
 - **Subcategory filtering** — Expand a parent category to toggle individual subcategories. Parent checkbox shows indeterminate state when some subcategories are excluded. All categories with subcategories show the expand arrow in both expense and income views.
-- **Excluded categories toggle** — Categories can be marked as excluded (stored in localStorage). A "Show Excluded" toggle reveals them in the expense filter.
 - **Income line** — Solid green line on bar charts showing income per period. Labels display the income value (year and month bar views). Respects category/subcategory filters.
 - **Inflation-adjusted income line** — Solid yellow line showing income deflated to base-year (earliest year) purchasing power using Croatian CPI data. Inflation rates are configured in `js/inflationConfig.js`. In year view, each year uses its cumulative CPI index. In month views, all months in a year share that year's CPI index. Labels show the real value. Tooltips include both nominal and real income.
 - **Net line** — Dashed line showing income minus expenses per period. Green when net is positive, red (line and label) when negative. Labels have a dark background for readability. Tooltips show expenses, income, and net.
@@ -35,7 +34,7 @@ Loads a Cashew CSV export and provides interactive visualizations to understand 
 - **ECharts 5** (CDN) — charts and treemaps
 - **PapaParse 5** (CDN) — CSV parsing
 - **Vanilla JS** (ES modules) — no framework
-- **localStorage** — persists group assignments, view preferences, subcategory exclusions
+- **localStorage** — persists group assignments, view preferences, category filters, subcategory exclusions
 - **IndexedDB** — persists uploaded CSV files
 
 ## File Structure
@@ -92,12 +91,12 @@ All user preferences survive page reloads:
 | What | Storage | Key |
 |------|---------|-----|
 | Group assignments | localStorage | `cashew_group_assignments` |
-| View mode, selected year, show excluded, filter mode | localStorage | `cashew_view_prefs` |
+| View mode, selected year, filter mode | localStorage | `cashew_view_prefs` |
+| Category filters (expenses + income) | localStorage | `cashew_category_filters` |
 | Subcategory exclusions | localStorage | `cashew_subcategory_exclusions` |
-| Excluded categories | localStorage | `cashew_excluded_categories` |
 | Line visibility | localStorage | `cashew_line_visibility` |
 | Uploaded CSV files | IndexedDB | `cashew_analyzer` / `csv_files` |
 
 ## Default Filter State
 
-All categories are enabled by default on page load. Excluded categories (configured via localStorage) are hidden from the expense filter unless the "Show Excluded" toggle is on. Filter state is not persisted across reloads.
+All categories are enabled by default on first load. Category filter selections (both expense and income) persist in localStorage across reloads.

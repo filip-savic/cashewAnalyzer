@@ -55,8 +55,7 @@ function computeTotals() {
 
   const filters = State.get('categoryFilters');
   const subExcl = State.get('subcategoryExclusions');
-  const excluded = State.getExcludedCategories();
-  let txns = State.get('transactions').filter(t => !t.isIncome && !excluded.has(t.category));
+  let txns = State.get('transactions').filter(t => !t.isIncome);
   const viewMode = State.get('viewMode');
   const selectedYear = viewMode !== 'year' ? State.get('selectedYear') : null;
 
@@ -115,7 +114,7 @@ function render() {
       pill.draggable = true;
 
       // Find category color
-      const cats = State.getAllExpenseCategories();
+      const cats = State.getExpenseCategories();
       const catInfo = cats.find(c => c.name === catName);
       const color = catInfo ? catInfo.color : '#78909c';
 

@@ -8,7 +8,6 @@ export function initControls() {
   initLineToggles();
   initFilterModeToggle();
   initCategoryFilters();
-  initExcludedToggle();
 }
 
 function initYearSelect() {
@@ -151,22 +150,14 @@ function initFilterModeToggle() {
 
   State.on('filterMode', (mode) => {
     tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
-    // Hide "Show Excluded" toggle in income mode
-    document.getElementById('invest-toggle-label').style.display =
-      mode === 'income' ? 'none' : '';
     renderFilters();
   });
-
-  // Initial state
-  document.getElementById('invest-toggle-label').style.display =
-    currentMode === 'income' ? 'none' : '';
 }
 
 function initCategoryFilters() {
   renderFilters();
 
   State.on('transactions', () => renderFilters());
-  State.on('showExcluded', () => renderFilters());
   State.on('selectedYear', () => renderFilters());
   State.on('viewMode', () => renderFilters());
 
@@ -186,8 +177,7 @@ function getVisibleCategories() {
   if (State.get('filterMode') === 'income') {
     return State.getIncomeCategories();
   }
-  const showExcluded = State.get('showExcluded');
-  return showExcluded ? State.getAllExpenseCategories() : State.getExpenseCategories();
+  return State.getExpenseCategories();
 }
 
 function computePeriodTotals() {
@@ -376,19 +366,6 @@ function renderFilters() {
       container.appendChild(subContainer);
     }
   }
-}
-
-function initExcludedToggle() {
-  const cb = document.getElementById('show-invest');
-  cb.checked = State.get('showExcluded');
-
-  cb.addEventListener('change', () => {
-    State.set('showExcluded', cb.checked);
-  });
-
-  State.on('showExcluded', (val) => {
-    cb.checked = val;
-  });
 }
 
 export function selectYear(year) {

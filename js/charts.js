@@ -115,11 +115,9 @@ function getFilteredIncomeTransactions() {
 
 function getFilteredExpenseTransactions() {
   const filters = State.get('categoryFilters');
-  const showExcluded = State.get('showExcluded');
   const subExcl = State.get('subcategoryExclusions');
   return State.get('transactions').filter(t => {
     if (t.isIncome) return false;
-    if (!showExcluded && State.getExcludedCategories().has(t.category)) return false;
     if (filters !== null && !filters.has(t.category)) return false;
     if (subExcl.size > 0 && t.subcategory && subExcl.has(`${t.category}::${t.subcategory}`)) return false;
     return true;

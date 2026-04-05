@@ -2,10 +2,7 @@ const STORAGE_KEY_GROUPS = 'cashew_group_assignments';
 const STORAGE_KEY_FILTERS = 'cashew_category_filters';
 const STORAGE_KEY_VIEW = 'cashew_view_prefs';
 const STORAGE_KEY_SUBCAT = 'cashew_subcategory_exclusions';
-const STORAGE_KEY_EXCLUDED = 'cashew_excluded_categories';
 const STORAGE_KEY_LINES = 'cashew_line_visibility';
-
-let excludedCategories = new Set();
 
 const listeners = {};
 const wildcardListeners = [];
@@ -22,7 +19,6 @@ const state = {
   categoryFilters: null,       // null = all, Set = explicit filter (expenses)
   incomeCategoryFilters: null,  // null = all, Set = explicit filter (income)
   groupAssignments: null,
-  showExcluded: false,
   filterMode: 'expenses',     // 'expenses' | 'income'
   subcategoryExclusions: new Set(),
   loadedFile: '',
@@ -43,7 +39,6 @@ function loadPersistedState() {
       const prefs = JSON.parse(saved);
       if (prefs.viewMode) state.viewMode = prefs.viewMode;
       if (prefs.selectedYear !== undefined) state.selectedYear = prefs.selectedYear;
-      if (prefs.showExcluded !== undefined) state.showExcluded = prefs.showExcluded;
       if (prefs.filterMode) state.filterMode = prefs.filterMode;
     }
   } catch { /* use defaults */ }
@@ -56,16 +51,18 @@ function loadPersistedState() {
   } catch { /* use defaults */ }
 
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_EXCLUDED);
+    const saved = localStorage.getItem(STORAGE_KEY_LINES);
     if (saved) {
-      excludedCategories = new Set(JSON.parse(saved));
+      state.lineVisibility = { ...state.lineVisibility, ...JSON.parse(saved) };
     }
   } catch { /* use defaults */ }
 
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_LINES);
+    const saved = localStorage.getItem(STORAGE_KEY_FILTERS);
     if (saved) {
-      state.lineVisibility = { ...state.lineVisibility, ...JSON.parse(saved) };
+      const f = JSON.parse(saved);
+      if (f.categoryFilters !== null) state.categoryFilters = new Set(f.categoryFilters);
+      if (f.incomeCategoryFilters !== null) state.incomeCategoryFilters = new Set(f.incomeCategoryFilters);
     }
   } catch { /* use defaults */ }
 }
@@ -81,7 +78,6 @@ function persistViewPrefs() {
     localStorage.setItem(STORAGE_KEY_VIEW, JSON.stringify({
       viewMode: state.viewMode,
       selectedYear: state.selectedYear,
-      showExcluded: state.showExcluded,
       filterMode: state.filterMode,
     }));
   } catch { /* storage full */ }
@@ -93,9 +89,12 @@ function persistSubcatExclusions() {
   } catch { /* storage full */ }
 }
 
-function persistExcludedCategories() {
+function persistFilters() {
   try {
-    localStorage.setItem(STORAGE_KEY_EXCLUDED, JSON.stringify([...excludedCategories]));
+    localStorage.setItem(STORAGE_KEY_FILTERS, JSON.stringify({
+      categoryFilters: state.categoryFilters ? [...state.categoryFilters] : null,
+      incomeCategoryFilters: state.incomeCategoryFilters ? [...state.incomeCategoryFilters] : null,
+    }));
   } catch { /* storage full */ }
 }
 
@@ -120,7 +119,8 @@ export const State = {
     state[key] = value;
 
     if (key === 'groupAssignments') persistGroups();
-    if (['viewMode', 'selectedYear', 'showExcluded', 'filterMode'].includes(key)) persistViewPrefs();
+    if (['viewMode', 'selectedYear', 'filterMode'].includes(key)) persistViewPrefs();
+    if (['categoryFilters', 'incomeCategoryFilters'].includes(key)) persistFilters();
     if (key === 'subcategoryExclusions') persistSubcatExclusions();
     if (key === 'lineVisibility') persistLineVisibility();
 
@@ -136,31 +136,12 @@ export const State = {
     }
   },
 
-  getExcludedCategories() {
-    return excludedCategories;
-  },
-
-  toggleExcluded(categoryName) {
-    if (excludedCategories.has(categoryName)) {
-      excludedCategories.delete(categoryName);
-    } else {
-      excludedCategories.add(categoryName);
-    }
-    persistExcludedCategories();
-  },
-
   getFilteredTransactions() {
     let txns = state.transactions;
     const filters = state.categoryFilters;
-    const showExcluded = state.showExcluded;
 
     // Filter out income
     txns = txns.filter(t => !t.isIncome);
-
-    // Filter excluded categories unless toggled on
-    if (!showExcluded && excludedCategories.size > 0) {
-      txns = txns.filter(t => !excludedCategories.has(t.category));
-    }
 
     // Apply category filters (null = all, Set = explicit)
     if (filters !== null) {
@@ -185,11 +166,6 @@ export const State = {
   },
 
   getExpenseCategories() {
-    if (excludedCategories.size === 0) return state.expenseCategories;
-    return state.expenseCategories.filter(c => !excludedCategories.has(c.name));
-  },
-
-  getAllExpenseCategories() {
     return state.expenseCategories;
   },
 
@@ -209,16 +185,13 @@ export const State = {
         ...state.groupAssignments.canSave,
         ...state.groupAssignments.rest,
       ]);
-      const expenseNames = excludedCategories.size > 0
-        ? categoryNames.filter(n => !excludedCategories.has(n))
-        : categoryNames;
-      for (const name of expenseNames) {
+      for (const name of categoryNames) {
         if (!allAssigned.has(name)) {
           state.groupAssignments.rest.push(name);
         }
       }
       // Remove categories that no longer exist
-      const validNames = new Set(expenseNames);
+      const validNames = new Set(categoryNames);
       for (const group of ['mustHave', 'canSave', 'rest']) {
         state.groupAssignments[group] = state.groupAssignments[group].filter(n => validNames.has(n));
       }
@@ -227,13 +200,10 @@ export const State = {
     }
 
     // No saved groups — all categories start in 'rest'
-    const expenseNames = excludedCategories.size > 0
-      ? categoryNames.filter(n => !excludedCategories.has(n))
-      : categoryNames;
     state.groupAssignments = {
       mustHave: [],
       canSave: [],
-      rest: [...expenseNames],
+      rest: [...categoryNames],
     };
     persistGroups();
   },

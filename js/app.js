@@ -62,21 +62,17 @@ async function loadData(csvContent, filename) {
   // Init groups with discovered expense categories
   State.initGroups(expense.map(c => c.name));
 
-  // Default filters: all categories on
-  State.set('categoryFilters', null);
-  State.set('incomeCategoryFilters', null);
-
   // Init all UI components
   initControls();
   initGroupManager();
   initCharts();
 
   // Listen for state changes and re-render
-  const renderKeys = ['viewMode', 'groupSubView', 'selectedYear', 'selectedMonth', 'categoryFilters', 'incomeCategoryFilters', 'groupAssignments', 'showExcluded', 'subcategoryExclusions', 'lineVisibility'];
+  const renderKeys = ['viewMode', 'groupSubView', 'selectedYear', 'selectedMonth', 'categoryFilters', 'incomeCategoryFilters', 'groupAssignments', 'subcategoryExclusions', 'lineVisibility'];
   for (const key of renderKeys) {
     State.on(key, () => {
       renderChart();
-      if (['viewMode', 'selectedYear', 'showExcluded', 'groupAssignments', 'categoryFilters', 'subcategoryExclusions'].includes(key)) {
+      if (['viewMode', 'selectedYear', 'groupAssignments', 'categoryFilters', 'subcategoryExclusions'].includes(key)) {
         updateGroupTotals();
       }
     });
